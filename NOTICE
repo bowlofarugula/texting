@@ -1,0 +1,8 @@
+texting
+Copyright 2026 Ian McDonald
+
+The macOS iMessage/SMS engine is openclaw/imsg
+(https://github.com/openclaw/imsg), Copyright Peter Steinberger and
+contributors, licensed under the MIT License. This plugin shells out to the
+`imsg` CLI for all reading, sending, routing, and reacting; it bundles a thin
+MCP server (server.ts) over that CLI and the skills that drive it.
