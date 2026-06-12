@@ -59,8 +59,9 @@ no API for that) — if no matching group exists, ask the user to create it
 in Messages first.
 
 **imsg CLI fallback** — only if the MCP tools aren't available in this
-session (e.g. setup incomplete). The bundled binary lives at
-`${CLAUDE_PLUGIN_ROOT}/bin/imsg` (or a brew `imsg` on PATH):
+session (e.g. setup incomplete). The plugin's launcher at
+`${CLAUDE_PLUGIN_ROOT}/bin/imsg` finds the installed engine
+(`~/.claude/texting/engine`, or a brew `imsg` on PATH):
 
 ```sh
 "${CLAUDE_PLUGIN_ROOT:-.}/bin/imsg" send --to "<handle>" --text "<text>" --service auto

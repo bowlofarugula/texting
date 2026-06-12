@@ -1,5 +1,15 @@
 #!/bin/sh
-# Bundled imsg launcher — execs the imsg binary shipped inside this plugin
-# (macOS only; imsg is a macOS CLI). Resources live beside the binary.
-DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$DIR/imsg-macos/imsg" "$@"
+# imsg launcher — prefers the engine installed by /texting-setup
+# (~/.claude/texting/engine), then an installed imsg (Homebrew, PATH).
+# IMSG_PATH overrides everything.
+[ -n "$IMSG_PATH" ] && exec "$IMSG_PATH" "$@"
+ENGINE="$HOME/.claude/texting/engine/imsg"
+[ -x "$ENGINE" ] && exec "$ENGINE" "$@"
+for c in /opt/homebrew/bin/imsg /usr/local/bin/imsg; do
+  [ -x "$c" ] && exec "$c" "$@"
+done
+if command -v imsg >/dev/null 2>&1; then
+  exec imsg "$@"
+fi
+echo "imsg: engine not installed — run /texting-setup (or: brew install steipete/tap/imsg)" >&2
+exit 127

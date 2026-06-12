@@ -24,29 +24,45 @@ Arguments passed: `$ARGUMENTS` (optional)
 
 ---
 
-## Step 1 — the imsg engine (bundled, usually nothing to do)
+## Step 1 — install the imsg engine (you do this, via Bash)
 
-`imsg` now ships **bundled inside this plugin** (`bin/imsg`, a macOS universal
-binary), so there's normally no install step. The MCP server resolves the
-bundled binary first — it sits next to the server on disk, so it's found in
-both the terminal CLI and the Claude desktop app without relying on your shell
-PATH. Confirm it's reachable:
+The engine is the official **signed and notarized** macOS binary from the
+[openclaw/imsg](https://github.com/openclaw/imsg) GitHub release. You download
+and install it — the user does nothing and needs no Homebrew or developer
+tools; macOS's built-in `curl`/`unzip` do the work. First check whether it's
+already there:
 
 ```sh
-"${CLAUDE_PLUGIN_ROOT:-.}/bin/imsg" --version 2>/dev/null || imsg --version 2>/dev/null || echo MISSING
+"$HOME/.claude/texting/engine/imsg" --version 2>/dev/null || imsg --version 2>/dev/null || echo MISSING
 ```
 
 A version number → done, skip to Step 2. (imsg is macOS-only.)
 
-`MISSING` is unusual — it means neither the bundled binary nor an installed one
-was found. Fallbacks, in order:
+`MISSING` → install it (pinned version, checksum-verified):
 
-- Set `IMSG_PATH` to a working `imsg` binary, **or**
-- Install via Homebrew: `brew install steipete/tap/imsg` (no `brew`? install
-  Homebrew first: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`).
+```sh
+set -e
+IMSG_VERSION="v0.11.1"
+IMSG_SHA256="a25a541f0c4c8244f301a8495f875964dc4b0c3fd5cbf5ead6a64e4d282d940e"
+TMP="$(mktemp -d)"
+curl -fsSL -o "$TMP/imsg-macos.zip" \
+  "https://github.com/openclaw/imsg/releases/download/$IMSG_VERSION/imsg-macos.zip"
+echo "$IMSG_SHA256  $TMP/imsg-macos.zip" | shasum -a 256 -c -
+mkdir -p "$HOME/.claude/texting"
+rm -rf "$HOME/.claude/texting/engine"
+unzip -q "$TMP/imsg-macos.zip" -d "$HOME/.claude/texting/engine"
+rm -rf "$TMP"
+"$HOME/.claude/texting/engine/imsg" --version
+```
 
-> Resolution order: `IMSG_PATH` → bundled `bin/imsg` → `imsg` on PATH →
-> `/opt/homebrew/bin/imsg` → `/usr/local/bin/imsg`.
+A version number at the end → installed. If the checksum line fails, **stop**
+— do not install the file — and re-download once; persistent mismatch means
+the download is corrupted or tampered with, report it instead of proceeding.
+
+> Resolution order (server and `bin/imsg` launcher alike): `IMSG_PATH` →
+> `~/.claude/texting/engine/imsg` → `imsg` on PATH → `/opt/homebrew/bin/imsg`
+> → `/usr/local/bin/imsg`. Power-user alternative:
+> `brew install steipete/tap/imsg`.
 
 ## Step 2 — the bun runtime
 
@@ -130,7 +146,7 @@ Once on, it appends `- Sent by Claude for <name>` (name = sign_as > config
 
 | Symptom | Fix |
 | --- | --- |
-| tools say `imsg engine not found` | imsg is bundled (`bin/imsg`) — re-check Step 1; on macOS this is rare. Fallback: `brew install steipete/tap/imsg` or set `IMSG_PATH` |
+| tools say `imsg engine not found` | Step 1 wasn't run (or the engine dir was deleted) — run the Step 1 install. Fallback: `brew install steipete/tap/imsg` or set `IMSG_PATH` |
 | no send_message/read_messages tools in session | session predates the plugin enable — restart the session |
 | tools error: `authorization denied` / Full Disk Access | FDA on the wrong target — desktop users need the embedded claude.app, step 3 — then restart the app |
 | send fails with error `-1743` | Automation prompt was declined — System Settings → Privacy & Security → Automation → enable Messages for the host app |

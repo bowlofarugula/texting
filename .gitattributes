@@ -1,7 +1,0 @@
-# The bundled imsg engine ships a macOS universal binary plus heavy sidecar
-# resources — store the large payload in Git LFS so it doesn't bloat repo
-# history. The tiny bin/imsg launcher stub and the small *.xcprivacy manifests
-# stay normal text-tracked files.
-bin/imsg-macos/imsg filter=lfs diff=lfs merge=lfs -text
-bin/imsg-macos/imsg-bridge-helper.dylib filter=lfs diff=lfs merge=lfs -text
-bin/imsg-macos/PhoneNumberKit_PhoneNumberKit.bundle/PhoneNumberMetadata.json filter=lfs diff=lfs merge=lfs -text

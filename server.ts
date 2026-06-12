@@ -10,9 +10,9 @@
  * parsing or AppleScript lives here.
  *
  * Requires:
- *   - `imsg` — ships BUNDLED in this plugin's bin/ (macOS universal binary);
- *     resolved from there first, with `brew install steipete/tap/imsg` and
- *     IMSG_PATH as fallbacks.
+ *   - `imsg` — installed by /texting-setup from the official openclaw/imsg
+ *     release into ~/.claude/texting/engine; resolved from there first, with
+ *     an imsg on PATH / Homebrew and IMSG_PATH as fallbacks.
  *   - Full Disk Access for the process hosting Claude (reads chat.db).
  *   - Automation permission for Messages (sending/reacting; prompts on first send).
  */
@@ -39,41 +39,17 @@ process.on('uncaughtException', err => {
 
 // --- imsg location & invocation ----------------------------------------------
 
-// imsg ships BUNDLED in this plugin's bin/ — prefer it so there's no install
-// step. The binary sits next to this script on disk, so resolving it relative to
-// import.meta.dir is reachable in both the CLI and the Claude desktop app
-// regardless of whether the plugin bin/ dir made it onto the Bash PATH (an
-// undocumented detail in Desktop). GUI-launched apps also don't inherit a login
-// shell's PATH, which is why a bare `imsg` often isn't found. Resolution order:
-// explicit override → bundled (script dir, then CLAUDE_PLUGIN_ROOT) → PATH →
-// Homebrew prefixes (the documented brew fallback).
-// If the bundled binary is committed via Git LFS and the plugin was synced
-// without LFS, the real imsg payload (bin/imsg-macos/imsg) is a ~133-byte text
-// POINTER, not the executable. A real imsg is ~8MB, so a tiny file at that path
-// is an unfetched pointer — skip the bundle (and flag it) rather than running
-// the stub against a pointer.
-let bundledIsLfsPointer = false
-const isUsableBinary = (p: string): boolean => {
-  try { const st = statSync(p); return st.isFile() && st.size >= 4096 } catch { return false }
-}
-const isLfsPointer = (p: string): boolean => {
-  try { const st = statSync(p); return st.isFile() && st.size < 4096 } catch { return false }
-}
+// imsg is installed by /texting-setup into ~/.claude/texting/engine — a fixed
+// absolute path, so it's reachable in both the CLI and the Claude desktop app.
+// (GUI-launched apps don't inherit a login shell's PATH, which is why a bare
+// `imsg` often isn't found.) Resolution order: explicit override → installed
+// engine → PATH → Homebrew prefixes.
+const ENGINE_DIR = join(homedir(), '.claude', 'texting', 'engine')
 
 function locateImsg(): string {
   if (process.env.IMSG_PATH) return process.env.IMSG_PATH
-  const roots = [import.meta.dir, process.env.CLAUDE_PLUGIN_ROOT].filter(Boolean) as string[]
-  for (const r of roots) {
-    const realBin = join(r, 'bin', 'imsg-macos', 'imsg')
-    if (isUsableBinary(realBin)) {
-      // Prefer the launcher stub (keeps resource resolution beside the binary);
-      // fall back to running the binary directly.
-      const stub = join(r, 'bin', 'imsg')
-      try { if (statSync(stub).isFile()) return stub } catch {}
-      return realBin
-    }
-    if (isLfsPointer(realBin)) bundledIsLfsPointer = true
-  }
+  const engine = join(ENGINE_DIR, 'imsg')
+  try { if (statSync(engine).isFile()) return engine } catch {}
   const which = spawnSync('command', ['-v', 'imsg'], { shell: '/bin/sh', encoding: 'utf8' })
   if (which.status === 0 && which.stdout.trim()) return which.stdout.trim()
   for (const p of ['/opt/homebrew/bin/imsg', '/usr/local/bin/imsg']) {
@@ -84,14 +60,10 @@ function locateImsg(): string {
 
 const IMSG = locateImsg()
 
-const IMSG_NOT_FOUND = bundledIsLfsPointer
-  ? 'The bundled imsg binary (bin/imsg-macos/imsg) is an unfetched Git LFS pointer — the plugin was ' +
-    'synced without Git LFS, so the real binary never came down. Install git-lfs (`brew install ' +
-    'git-lfs && git lfs install`) and re-sync/reinstall the plugin, or `brew install steipete/tap/imsg` ' +
-    '(or set IMSG_PATH).'
-  : 'imsg engine not found. It ships bundled with this plugin (bin/imsg), so on macOS this should not ' +
-    'happen — run /texting-setup. (imsg is macOS-only. As a fallback you can install it with ' +
-    '`brew install steipete/tap/imsg`, or set IMSG_PATH.)'
+const IMSG_NOT_FOUND =
+  'imsg engine not installed — run /texting-setup, which downloads it from the official ' +
+  'openclaw/imsg release into ~/.claude/texting/engine. (imsg is macOS-only. Alternatives: ' +
+  '`brew install steipete/tap/imsg`, or set IMSG_PATH.)'
 
 type ImsgResult = { ok: boolean; stdout: string; stderr: string; code: number | null }
 
@@ -665,14 +637,13 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
       case 'status': {
         const lines: string[] = []
         let installed = false
-        // Bundled-binary diagnostic: report the bundled file's state explicitly
-        // (real binary vs unfetched Git LFS pointer vs absent), independent of any
-        // brew fallback, so plugin-sync delivery is unambiguous.
         {
-          const realBin = join(import.meta.dir, 'bin', 'imsg-macos', 'imsg')
-          if (isUsableBinary(realBin)) lines.push('✅ bundled imsg present (bin/imsg-macos/imsg)')
-          else if (isLfsPointer(realBin)) lines.push('⚠️ bundled imsg is an UNFETCHED Git LFS POINTER — plugin synced without LFS; the real binary never came down')
-          else lines.push('ℹ️ no bundled imsg at bin/imsg-macos/imsg')
+          const engine = join(ENGINE_DIR, 'imsg')
+          let engineInstalled = false
+          try { engineInstalled = statSync(engine).isFile() } catch {}
+          lines.push(engineInstalled
+            ? '✅ imsg engine installed (~/.claude/texting/engine)'
+            : 'ℹ️ no engine at ~/.claude/texting/engine — /texting-setup installs it')
           lines.push(`   engine in use: ${IMSG}`)
         }
         try {

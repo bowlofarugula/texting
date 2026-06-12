@@ -38,7 +38,7 @@ doesn't recognize get offered a real Contacts card.
 
 | Skill | Does |
 | --- | --- |
-| `/texting-setup` | One-time setup: verify the bundled `imsg` engine, then the Full Disk Access toggle |
+| `/texting-setup` | One-time setup: install the `imsg` engine (official release download), then the Full Disk Access toggle |
 | `/texting-send` | Send a text (confirms recipient + exact wording first) |
 | `/texting-messages` | Read threads, resolve "Sam" → handle via macOS Contacts |
 | `/texting-listen` | Session-bound watch: "tell me when Alex replies" — polls, notifies, drafts replies for approval, never auto-sends |
@@ -46,9 +46,12 @@ doesn't recognize get offered a real Contacts card.
 
 ## Setup friction (one-time, ~5 minutes)
 
-1. The `imsg` engine ships **bundled** with the plugin (macOS universal
-   binary in `bin/`) — no install step. (Fallback if it's ever missing:
-   `brew install steipete/tap/imsg`, or set `IMSG_PATH`.)
+1. The setup skill **installs the `imsg` engine for you** — it downloads
+   the signed, notarized macOS binary from the official
+   [openclaw/imsg](https://github.com/openclaw/imsg) release (checksum
+   verified) into `~/.claude/texting/engine`. No Homebrew or developer
+   tools needed. (Alternatives: `brew install steipete/tap/imsg`, or set
+   `IMSG_PATH`.)
 2. One Full Disk Access toggle for the app hosting Claude (desktop users:
    the embedded claude.app — the setup skill knows the path), then restart
    it

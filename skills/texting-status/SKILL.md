@@ -10,9 +10,9 @@ Run all checks, then report in plain language: one line per check with
 ✅/❌, then a "what to do" section only if something failed (point at the
 matching `/texting-setup` step).
 
-1. **imsg engine present**: it ships bundled with the plugin —
+1. **imsg engine present**: /texting-setup installs it to `~/.claude/texting/engine` —
    `"${CLAUDE_PLUGIN_ROOT:-.}/bin/imsg" --version 2>/dev/null || imsg --version 2>/dev/null || echo MISSING`.
-   `MISSING` → setup step 1 (bundled binary not found; fallback `brew install steipete/tap/imsg` or set `IMSG_PATH`).
+   `MISSING` → setup step 1 installs it (fallback `brew install steipete/tap/imsg` or set `IMSG_PATH`).
 2. **bun present**: `bun --version || "$HOME/.bun/bin/bun" --version`.
    Missing → setup step 2.
 3. **Messages DB readable**: `sqlite3 ~/Library/Messages/chat.db "SELECT COUNT(*) FROM chat" 2>&1`.

@@ -7,6 +7,6 @@ contributors, licensed under the MIT License. This plugin shells out to the
 `imsg` CLI for all reading, sending, routing, and reacting; it bundles a thin
 MCP server (server.ts) over that CLI and the skills that drive it.
 
-A prebuilt `imsg` binary (macOS universal) and its bundled resources are
-redistributed under `bin/imsg-macos/`, from the openclaw/imsg v0.11.1 release,
-under the MIT License. The imsg LICENSE terms apply to those files.
+The `imsg` binary itself is not redistributed here — the /texting-setup skill
+downloads it from the official openclaw/imsg GitHub release (signed and
+notarized) onto the user's machine. The imsg LICENSE terms apply to it.
