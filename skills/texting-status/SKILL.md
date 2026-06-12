@@ -1,17 +1,18 @@
 ---
-name: status
+name: texting-status
 description: Check that texting over iMessage is healthy — imsg engine installed, Messages database readable, tools live. Use when the user asks whether texting works, why a send/read failed, or who Claude can text.
 user-invocable: true
 ---
 
-# /texting:status — texting health check
+# /texting-status — texting health check
 
 Run all checks, then report in plain language: one line per check with
 ✅/❌, then a "what to do" section only if something failed (point at the
-matching `/texting:setup` step).
+matching `/texting-setup` step).
 
-1. **imsg engine present**: `command -v imsg >/dev/null && imsg --version || echo MISSING`.
-   `MISSING` → setup step 1 (`brew install steipete/tap/imsg`).
+1. **imsg engine present**: it ships bundled with the plugin —
+   `"${CLAUDE_PLUGIN_ROOT:-.}/bin/imsg" --version 2>/dev/null || imsg --version 2>/dev/null || echo MISSING`.
+   `MISSING` → setup step 1 (bundled binary not found; fallback `brew install steipete/tap/imsg` or set `IMSG_PATH`).
 2. **bun present**: `bun --version || "$HOME/.bun/bin/bun" --version`.
    Missing → setup step 2.
 3. **Messages DB readable**: `sqlite3 ~/Library/Messages/chat.db "SELECT COUNT(*) FROM chat" 2>&1`.

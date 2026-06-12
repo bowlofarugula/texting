@@ -6,8 +6,8 @@
   "author": {
     "name": "Ian McDonald"
   },
-  "homepage": "https://github.com/bowlofarugula/texting",
-  "repository": "https://github.com/bowlofarugula/texting",
+  "homepage": "https://github.com/bowlofarugula/messaging/tree/main/plugins/texting",
+  "repository": "https://github.com/bowlofarugula/messaging",
   "license": "Apache-2.0",
   "keywords": [
     "imessage",

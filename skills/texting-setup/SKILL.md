@@ -1,10 +1,10 @@
 ---
-name: setup
+name: texting-setup
 description: One-time setup for texting over iMessage from Claude — installs the imsg engine and walks the Full Disk Access + Automation grants. Use when the user asks to set up texting, when the iMessage tools (send_message/read_messages) are missing or erroring, or before the first send/read on a new Mac.
 user-invocable: true
 ---
 
-# /texting:setup — iMessage connector setup
+# /texting-setup — iMessage connector setup
 
 After this runs, the user can say "text Sam we're confirmed for Friday" or
 "any new messages from Sam?" in any Claude session, with normal permission
@@ -24,28 +24,29 @@ Arguments passed: `$ARGUMENTS` (optional)
 
 ---
 
-## Step 1 — install the imsg engine
+## Step 1 — the imsg engine (bundled, usually nothing to do)
 
-`imsg` installs via Homebrew. Check first:
-
-```sh
-command -v imsg >/dev/null && imsg --version || echo MISSING
-```
-
-`MISSING` → install it. If `brew` is present:
+`imsg` now ships **bundled inside this plugin** (`bin/imsg`, a macOS universal
+binary), so there's normally no install step. The MCP server resolves the
+bundled binary first — it sits next to the server on disk, so it's found in
+both the terminal CLI and the Claude desktop app without relying on your shell
+PATH. Confirm it's reachable:
 
 ```sh
-brew install steipete/tap/imsg
+"${CLAUDE_PLUGIN_ROOT:-.}/bin/imsg" --version 2>/dev/null || imsg --version 2>/dev/null || echo MISSING
 ```
 
-No `brew`? Install Homebrew first (`/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`),
-then the line above. After install, confirm `imsg --version` prints a
-version.
+A version number → done, skip to Step 2. (imsg is macOS-only.)
 
-> The server self-locates the binary (`command -v imsg`, then
-> `/opt/homebrew/bin/imsg`, then `/usr/local/bin/imsg`), so a GUI app that
-> doesn't inherit your shell PATH still finds it. Override with `IMSG_PATH`
-> if it lives somewhere unusual.
+`MISSING` is unusual — it means neither the bundled binary nor an installed one
+was found. Fallbacks, in order:
+
+- Set `IMSG_PATH` to a working `imsg` binary, **or**
+- Install via Homebrew: `brew install steipete/tap/imsg` (no `brew`? install
+  Homebrew first: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`).
+
+> Resolution order: `IMSG_PATH` → bundled `bin/imsg` → `imsg` on PATH →
+> `/opt/homebrew/bin/imsg` → `/usr/local/bin/imsg`.
 
 ## Step 2 — the bun runtime
 
@@ -107,16 +108,29 @@ Then have them try a read: "what are my recent messages?" → the
 Quickest end-to-end check is the status tool:
 
 ```
-run /texting:status
+run /texting-status
 ```
 
 It reports imsg present, chat.db readable, and Messages reachable.
+
+## Optional — the AI-disclosure signature
+
+By default, messages go out **as-is**: no "- Sent by Claude" stamp. The
+signature is opt-in (we don't presume to label the user's own texts). If they
+want machine-sent texts disclosed, mention they can enable it:
+
+- Globally: set `signature: true` in `~/.claude/texting/config.json` (and
+  optionally `signatureName` for the name); or env `IMESSAGE_APPEND_SIGNATURE=true`.
+- Per send: "send this as Acme" → the signature is added for that message only.
+
+Once on, it appends `- Sent by Claude for <name>` (name = sign_as > config
+`signatureName` > macOS account first name).
 
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
-| tools say `imsg is not installed` | Step 1 — `brew install steipete/tap/imsg`; confirm `imsg --version` |
+| tools say `imsg engine not found` | imsg is bundled (`bin/imsg`) — re-check Step 1; on macOS this is rare. Fallback: `brew install steipete/tap/imsg` or set `IMSG_PATH` |
 | no send_message/read_messages tools in session | session predates the plugin enable — restart the session |
 | tools error: `authorization denied` / Full Disk Access | FDA on the wrong target — desktop users need the embedded claude.app, step 3 — then restart the app |
 | send fails with error `-1743` | Automation prompt was declined — System Settings → Privacy & Security → Automation → enable Messages for the host app |

@@ -1,10 +1,10 @@
 ---
-name: messages
+name: texting-messages
 description: Read iMessages — "any new messages from Sam?", "what did Sarah say?", "catch me up on my texts". Resolves contact names to handles and reads conversation history via the read_messages tool.
 user-invocable: true
 ---
 
-# /texting:messages — read iMessages
+# /texting-messages — read iMessages
 
 Arguments passed: `$ARGUMENTS` (free-form, e.g. "anything new from Sam?")
 
@@ -13,7 +13,7 @@ iMessage server), with `list_chats` for an inbox-style overview and
 `search_messages` for keyword lookups. `read_messages` returns threads
 labelled DM/Group with timestamped messages — any conversation, like a mail
 connector reads any email. If the tools are missing or error with
-`authorization denied`, run `/texting:setup`.
+`authorization denied`, run `/texting-setup`.
 
 ## Resolve who they mean
 

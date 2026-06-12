@@ -1,10 +1,10 @@
 ---
-name: listen
-description: Watch for new iMessages from a contact while this session is open — "listen for messages from Sam", "let me know when Alex replies". Polls on a timer, surfaces new messages, drafts (never auto-sends) replies. Use when the user wants to be told about incoming texts, not for one-off reads (use messages) or 24/7 unattended response (see docs/AUTOREPLY.md).
+name: texting-listen
+description: Watch for new iMessages from a contact while this session is open — "listen for messages from Sam", "let me know when Alex replies". Polls on a timer, surfaces new messages, drafts (never auto-sends) replies. Use when the user wants to be told about incoming texts, not for one-off reads (use texting-messages) or 24/7 unattended response (see docs/AUTOREPLY.md).
 user-invocable: true
 ---
 
-# /texting:listen — watch a thread for new messages
+# /texting-listen — watch a thread for new messages
 
 Arguments passed: `$ARGUMENTS` (e.g. "alex", "sam until she confirms")
 

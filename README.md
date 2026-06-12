@@ -38,15 +38,17 @@ doesn't recognize get offered a real Contacts card.
 
 | Skill | Does |
 | --- | --- |
-| `/texting:setup` | One-time install: the `imsg` engine, plus the Full Disk Access toggle |
-| `/texting:send` | Send a text (confirms recipient + exact wording first) |
-| `/texting:messages` | Read threads, resolve "Sam" → handle via macOS Contacts |
-| `/texting:listen` | Session-bound watch: "tell me when Alex replies" — polls, notifies, drafts replies for approval, never auto-sends |
-| `/texting:status` | Health check |
+| `/texting-setup` | One-time setup: verify the bundled `imsg` engine, then the Full Disk Access toggle |
+| `/texting-send` | Send a text (confirms recipient + exact wording first) |
+| `/texting-messages` | Read threads, resolve "Sam" → handle via macOS Contacts |
+| `/texting-listen` | Session-bound watch: "tell me when Alex replies" — polls, notifies, drafts replies for approval, never auto-sends |
+| `/texting-status` | Health check |
 
 ## Setup friction (one-time, ~5 minutes)
 
-1. `brew install steipete/tap/imsg` — the engine (the setup skill does it)
+1. The `imsg` engine ships **bundled** with the plugin (macOS universal
+   binary in `bin/`) — no install step. (Fallback if it's ever missing:
+   `brew install steipete/tap/imsg`, or set `IMSG_PATH`.)
 2. One Full Disk Access toggle for the app hosting Claude (desktop users:
    the embedded claude.app — the setup skill knows the path), then restart
    it
@@ -59,8 +61,11 @@ Same consent shape as a mail connector: Claude can read any conversation
 texts" decision, just like connecting Gmail is the "Claude may read my
 email" decision. The guarantees on top:
 
-- Every send is human-approved (permission prompt with the exact text) and
-  signed `- Sent by Claude for <name>` — the name defaults to the macOS account first name, can be set per machine ("set my default signature to Acme") or per send ("send this as Acme"), so machine-sent messages are always disclosed.
+- Every send is human-approved (permission prompt with the exact text). An
+  optional `- Sent by Claude for <name>` AI-disclosure signature is available
+  but **off by default** — enable it globally (`signature: true` in
+  `~/.claude/texting/config.json`) or per send (`sign_as`); we don't stamp
+  your texts unless you ask.
 - Nothing listens for inbound texts; an incoming message cannot trigger
   Claude. Reads happen only when the user asks, about what they asked.
 - Message content Claude reads is treated as data — instructions embedded

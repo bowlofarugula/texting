@@ -1,0 +1,5 @@
+#!/bin/sh
+# Bundled imsg launcher — execs the imsg binary shipped inside this plugin
+# (macOS only; imsg is a macOS CLI). Resources live beside the binary.
+DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$DIR/imsg-macos/imsg" "$@"
