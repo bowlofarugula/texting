@@ -103,8 +103,9 @@ target depends on how Claude runs (verified empirically):
 Quit and reopen the app after granting, then re-run the test.
 
 There is no contact configuration. Names come from **macOS Contacts** —
-when the user says "text Sam", Sam is looked up in their real address
-book, and unknown people get offered a proper Contacts card.
+when the user says "text Sam", the `send_message` tool passes the name to
+imsg, which looks Sam up in their real address book itself (no manual
+lookup needed), and unknown people get offered a proper Contacts card.
 
 ## Step 4 — first send (the Automation prompt)
 
@@ -128,6 +129,26 @@ run /texting-status
 ```
 
 It reports imsg present, chat.db readable, and Messages reachable.
+
+## Optional — the hard approval gate
+
+By default, sends go through the normal review-before-send flow above. For
+users who want a **hard stop** — every outgoing message pauses on a yes/no
+dialog that only a human can answer, shown in the client with the exact
+recipient and text — offer the approval gate, especially on managed or
+shared machines where "Claude must never send without my explicit OK" is a
+requirement:
+
+- Enable: set `approval: true` in `~/.claude/texting/config.json` (create
+  the file/dir if absent; read first and preserve other fields; 2-space
+  indent). Applies from the next send — no restart needed.
+- Explain the behavior in plain language: a dialog appears before each
+  send/reaction; **Decline** cancels it and nothing goes out.
+- Caveat: the dialog needs a client that supports approval prompts (MCP
+  elicitation — Claude Code does). In a client that can't show them, the
+  gate **blocks sends entirely rather than sending unapproved** — that's
+  intentional (fail-closed), and turning the gate off is the only way to
+  send from such a client.
 
 ## Optional — the AI-disclosure signature
 

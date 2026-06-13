@@ -15,7 +15,9 @@ and the Mac is awake. Say so up front in one line when starting. For true
 
 ## Start
 
-1. Resolve the contact (macOS Contacts → ask).
+1. Resolve the contact from `list_chats` output — rows carry contact and
+   display names next to the handle/`chat_id` (no manual Contacts lookup;
+   the engine labels chats itself). Ambiguous or missing → ask.
 2. Establish a baseline: `read_messages` for that chat (pass the handle as
    `chat`); note the ISO timestamp and content of the latest message.
    Report the baseline to the user.

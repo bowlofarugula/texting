@@ -25,10 +25,13 @@ matching `/texting-setup` step).
    **call the `status` tool** — it confirms imsg + chat.db readability in
    one shot. Missing while 1–3 pass → the session predates the plugin;
    restart it.
-5. **Contacts lookup**: the AddressBook database is readable —
-   `ls "$HOME/Library/Application Support/AddressBook/"*.abcddb "$HOME/Library/Application Support/AddressBook/Sources"/*/*.abcddb 2>/dev/null | head -1`
-   returns a path. (Covered by the same Full Disk Access grant; this is how
-   "text Sam" resolves to a number.)
+5. **Config**: read `~/.claude/texting/config.json` (fine if absent) and
+   report the two opt-in safeguards in plain language: the **approval
+   gate** (`approval: true` → every send pauses on a yes/no dialog only
+   the user can answer) and the **AI-disclosure signature**
+   (`signature: true` → "- Sent by Claude for <name>" is appended). Name
+   resolution needs no separate check — imsg resolves contact names itself
+   under the same Full Disk Access grant as chat.db.
 
 If everything passes, suggest: "text yourself a hello, then ask me for your
 recent messages."

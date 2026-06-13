@@ -11,18 +11,33 @@ or "+15551234567 the cut is ready")
 
 ## Resolve the recipient
 
-You need a handle: phone in `+1` format, an Apple ID email, or a macOS
-contact name. Resolve names the same way as `/texting-messages`: macOS
-Contacts (AddressBook sqlite) → ask the user. There is no plugin-private
-contact store. After a successful send to someone new, offer to add them to
-macOS Contacts (`scripts/add-contact.applescript "<Name>" "<handle>"` —
-one-time Contacts Automation prompt on first use).
+Pass the recipient straight to `send_message` — `to` accepts a phone in
+`+1` format, an Apple ID email, or a macOS contact name. Name resolution is
+the engine's job: imsg looks the name up in the user's real macOS Contacts
+itself, so don't pre-resolve names with your own Contacts/AddressBook
+queries — that duplicates what the tool already does and adds steps the
+user has to sit through. If you need to confirm *who* a name maps to (or
+the name is ambiguous), match it against `list_chats`/`read_messages`
+output — rows carry contact and display names — or simply ask the user for
+the number/email. After a successful send to someone brand new (handle the
+user supplied, no Contacts card), offer to add them to macOS Contacts
+(`scripts/add-contact.applescript "<Name>" "<handle>"` — the one
+genuinely manual step, since the engine has no contact-write; one-time
+Contacts Automation prompt on first use).
 
 ## Confirm, then send
 
-**Always show the exact recipient handle and exact message text and get a
-yes before sending.** If the user dictated rough intent ("tell her I'm
-running late"), draft the text, show it, let them edit.
+**Always show the exact recipient and exact message text and get a yes
+before sending.** If the user dictated rough intent ("tell her I'm running
+late"), draft the text, show it, let them edit.
+
+If the **approval gate** is enabled (`approval: true` in
+`~/.claude/texting/config.json`), the send also pauses on a client dialog
+showing the recipient and final text — only the user can answer it, and it
+is the final say. A "cancelled" tool result means they declined: stop
+there, don't retry or rephrase to resend. If the result says the client
+can't show approval prompts, relay that message as-is — the send was
+blocked on purpose (fail-closed), not broken.
 
 Send with the **`send_message` MCP tool** (this plugin's iMessage server):
 `to` takes the handle directly — phone, email, contact name, or a numeric

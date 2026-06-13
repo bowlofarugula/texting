@@ -17,22 +17,20 @@ connector reads any email. If the tools are missing or error with
 
 ## Resolve who they mean
 
-Names live in **macOS Contacts** — the same contacts the user sees in the
-Contacts app. There is no plugin-private contact store.
+Resolution happens through the tools — the engine integrates macOS
+Contacts itself, and chat rows come back already labelled with contact and
+display names. Don't query the AddressBook/Contacts databases directly;
+everything below is faster and stays inside the tool surface.
 
 1. A handle in the arguments → use it directly.
-2. A name → look it up in macOS Contacts (the Full Disk Access grant
-   covers the AddressBook database). Search first/last/nickname/org:
-   ```sh
-   for db in "$HOME/Library/Application Support/AddressBook/Sources"/*/AddressBook-v22.abcddb "$HOME/Library/Application Support/AddressBook/AddressBook-v22.abcddb"; do
-     [ -f "$db" ] && sqlite3 "$db" "SELECT r.ZFIRSTNAME, r.ZLASTNAME, r.ZNICKNAME, r.ZORGANIZATION, p.ZFULLNUMBER FROM ZABCDRECORD r JOIN ZABCDPHONENUMBER p ON p.ZOWNER = r.Z_PK WHERE r.ZFIRSTNAME LIKE '%NAME%' OR r.ZLASTNAME LIKE '%NAME%' OR r.ZNICKNAME LIKE '%NAME%' OR r.ZORGANIZATION LIKE '%NAME%';" 2>/dev/null
-   done
-   ```
-   (Also check `ZABCDEMAILADDRESS`/`ZADDRESS` for email handles.
-   Normalize numbers to `+1XXXXXXXXXX` — strip spaces, dashes, parens.)
+2. A name → find it in the tool output: `list_chats` rows show contact
+   names, group names, and participants alongside the `chat_id` and
+   handles. Match the name there (check nicknames/partial matches), then
+   read with the handle or `chat_id` you found. Someone the user texts has
+   a thread; if no row matches, there is usually nothing to read anyway.
 3. Multiple matches → ask which one. No match → ask for the number/email,
    then offer to **add them to macOS Contacts properly** (so Messages,
-   their phone, and this plugin all learn the name at once):
+   their phone, and the engine all learn the name at once):
    ```sh
    osascript "<skill-base-dir>/../../scripts/add-contact.applescript" "<Name>" "<handle>"
    ```
@@ -40,8 +38,7 @@ Contacts app. There is no plugin-private contact store.
    user to click Allow. Never create a card without asking.
 4. No specific person ("catch me up") → call `read_messages` with no `chat`
    for the most recently active threads (or `list_chats` for a lighter
-   overview), and label them with names resolved from Contacts where
-   possible.
+   overview) — threads arrive already labelled with names.
 5. A group ("the family group", "the thread with Sarah and Tom") → find it
    with `list_chats`: group rows show the group's name, participants, and
    `chat_id`. Match by name or member set; pass that numeric `chat_id` as

@@ -415,7 +415,7 @@ function watchMessages(opts: WatchOpts): Promise<Message[]> {
 // --- mcp -----------------------------------------------------------------------
 
 const mcp = new Server(
-  { name: 'imessage', version: '0.11.0' },
+  { name: 'imessage', version: '0.14.0' },
   {
     capabilities: { tools: {} },
     instructions: [
