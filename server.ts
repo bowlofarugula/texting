@@ -127,9 +127,9 @@ function explain(stderr: string, code: number | null): string {
 const CONFIG_FILE =
   process.env.IMESSAGE_CONFIG_PATH ?? join(homedir(), '.claude', 'texting', 'config.json')
 
-function readConfig(): { signatureName?: string; signature?: boolean } {
+function readConfig(): { signatureName?: string; signature?: boolean; approval?: boolean } {
   try {
-    return JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as { signatureName?: string; signature?: boolean }
+    return JSON.parse(readFileSync(CONFIG_FILE, 'utf8')) as { signatureName?: string; signature?: boolean; approval?: boolean }
   } catch {
     return {}
   }
@@ -162,6 +162,72 @@ function signatureFor(name?: string | null, explicit = false): string {
   if (process.env.IMESSAGE_SIGNATURE != null) return `\n\n${process.env.IMESSAGE_SIGNATURE}`
   const n = (name ?? '').trim() || configSignatureName() || ownerFirstName()
   return n ? `\n\n- Sent by Claude for ${n}` : '\n\n- Sent by Claude'
+}
+
+// --- approval (hard send gate) -------------------------------------------------
+
+// Optional hard stop on outbound actions (send_message, react): when on, every
+// send pauses on an MCP elicitation prompt that only the human can answer in
+// the client UI — the model has no way to approve it itself. OFF by default;
+// turn it on with `approval: true` in config.json or
+// IMESSAGE_REQUIRE_APPROVAL=true (env wins, true/false).
+//
+// Fail-closed by design: if the connected client cannot show elicitation
+// prompts (no `elicitation` capability — e.g. Claude Desktop today), outbound
+// tools are blocked rather than silently sent. Reads are never gated.
+function approvalRequired(): boolean {
+  const env = process.env.IMESSAGE_REQUIRE_APPROVAL
+  if (env != null) return env === 'true'
+  return readConfig().approval === true
+}
+
+// Give the human time to read the prompt — the SDK default request timeout is
+// only 60s, which a real approval can easily outlive.
+const APPROVAL_TIMEOUT_MS = 10 * 60_000
+
+// Returns null when the send may proceed (gate off, or user approved), or a
+// cancellation message to return as the tool result when the user declined.
+// Throws — blocking the send — when approval is required but the client has no
+// way to ask the human.
+async function approveSend(preview: string): Promise<string | null> {
+  if (!approvalRequired()) return null
+  if (!mcp.getClientCapabilities()?.elicitation) {
+    throw new Error(
+      'send blocked: approval mode is on, but this client cannot show approval prompts ' +
+      '(no MCP elicitation support), so nothing was sent. Do not retry or work around this. ' +
+      'The user can send from a client that supports elicitation (e.g. Claude Code), or turn ' +
+      'the gate off with `approval: false` in ' + CONFIG_FILE + '.',
+    )
+  }
+  let res
+  try {
+    res = await mcp.elicitInput(
+      {
+        message: preview,
+        requestedSchema: {
+          type: 'object',
+          properties: {
+            approve: {
+              type: 'boolean',
+              title: 'Approve this send',
+              description: 'true sends the message exactly as shown; anything else cancels.',
+            },
+          },
+          required: ['approve'],
+        },
+      },
+      { timeout: APPROVAL_TIMEOUT_MS },
+    )
+  } catch (e) {
+    throw new Error(
+      'send blocked: the approval prompt failed or timed out before the user answered; ' +
+      `nothing was sent. Do not retry without asking the user. (${e instanceof Error ? e.message : String(e)})`,
+    )
+  }
+  if (res.action !== 'accept' || (res.content as { approve?: boolean } | undefined)?.approve !== true) {
+    return 'cancelled: the user declined the approval prompt; nothing was sent. Treat this as final — do not retry or rephrase to resend.'
+  }
+  return null
 }
 
 // --- chat addressing ----------------------------------------------------------
@@ -364,6 +430,11 @@ const mcp = new Server(
       'Sends can carry an optional "- Sent by Claude for <name>" signature. It is OFF by default — do',
       'not add disclosure text yourself. It turns on only if the user enables it (config `signature:',
       'true`) or passes a per-send sign_as. Confirm recipient and exact wording before sending.',
+      '',
+      'If approval mode is enabled (config `approval: true`), every send_message/react pauses on an',
+      'approval prompt only the human can answer in the client UI. A "cancelled" result means the user',
+      'declined — treat it as final; never retry, rephrase, or look for another way to send. If a send is',
+      'blocked because the client cannot show approval prompts, relay that to the user as-is.',
     ].join('\n'),
   },
 )
@@ -516,6 +587,14 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
           ? text + signatureFor(signAs, signAs != null)
           : undefined
 
+        const preview = [
+          `Send ${service === 'auto' ? 'iMessage/SMS' : service} to ${to}?`,
+          signed != null ? `\n${signed}` : '',
+          files.length ? `\nAttachments: ${files.join(', ')}` : '',
+        ].filter(Boolean).join('\n')
+        const cancelled = await approveSend(preview)
+        if (cancelled) return { content: [{ type: 'text', text: cancelled }] }
+
         // Text first (carries the signature), then one send per attachment.
         if (signed != null) sendOne(target, signed, undefined, service)
         for (const f of files) sendOne(target, undefined, f, service)
@@ -590,6 +669,8 @@ mcp.setRequestHandler(CallToolRequestSchema, async req => {
         const chatId = String(args.chat_id ?? '').trim()
         const reaction = String(args.reaction ?? '').trim()
         if (!isChatId(chatId)) throw new Error('chat_id must be numeric (from read_messages/list_chats)')
+        const reactCancelled = await approveSend(`React "${reaction}" to the latest message in chat ${chatId}?`)
+        if (reactCancelled) return { content: [{ type: 'text', text: reactCancelled }] }
         const r = runImsg(['react', '--chat-id', chatId, '--reaction', reaction])
         if (!r.ok) throw new Error(explain(r.stderr, r.code))
         return { content: [{ type: 'text', text: `reacted ${reaction}` }] }
